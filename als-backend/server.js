@@ -23,20 +23,11 @@ connectDB()
 const app = express()
 const server = createServer(app)
 
-// Smart CORS configuration based on environment
-const isDevelopment = process.env.NODE_ENV !== 'production'
-const productionOrigin = process.env.FRONTEND_URL || "http://biz.bigdropsmarketing.com"
-const devOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000", 
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:3000"
+// CORS configuration for production
+const allowedOrigins = [
+  "https://biz.bigdropsmarketing.com",
+  "http://biz.bigdropsmarketing.com"
 ]
-
-// Combine origins based on environment
-const allowedOrigins = isDevelopment 
-  ? [...devOrigins, productionOrigin] // Dev: allow both localhost and production
-  : [productionOrigin] // Production: only allow production domain
 
 // Socket.io setup
 const io = new Server(server, {
@@ -58,11 +49,6 @@ app.use(cors({
     
     // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true)
-    }
-    
-    // For development, be more permissive with localhost
-    if (isDevelopment && origin && origin.includes('localhost')) {
       return callback(null, true)
     }
     
