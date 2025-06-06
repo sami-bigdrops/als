@@ -26,7 +26,9 @@ const server = createServer(app)
 // CORS configuration for production
 const allowedOrigins = [
   "https://biz.bigdropsmarketing.com",
-  "http://biz.bigdropsmarketing.com"
+  "http://biz.bigdropsmarketing.com",
+  "https://biz.bigdropsmarketing.com:5001",
+  "http://biz.bigdropsmarketing.com:5001"
 ]
 
 // Socket.io setup
