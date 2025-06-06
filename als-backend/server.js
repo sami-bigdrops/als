@@ -23,8 +23,15 @@ connectDB()
 const app = express()
 const server = createServer(app)
 
-// CORS configuration for production
+// CORS configuration for development and production
 const allowedOrigins = [
+  // Development origins
+  "http://localhost:5173", // Vite dev server
+  "http://localhost:3000", // React dev server (if used)
+  "http://localhost:5001", // Backend itself
+  "http://127.0.0.1:5173", // Alternative localhost
+  "http://127.0.0.1:5001", // Alternative localhost
+  // Production origins
   "https://biz.bigdropsmarketing.com",
   "http://biz.bigdropsmarketing.com",
   "https://biz.bigdropsmarketing.com:5001",
