@@ -281,7 +281,9 @@ class BrowserService {
   async performLogin(page, platform, employeeId, io) {
     try {
       // Wait for page to stabilize
-      await page.waitForLoadState ? page.waitForLoadState('networkidle') : page.waitForNavigation({ waitUntil: 'networkidle0' }).catch(() => {})
+      await page.waitForLoadState ? page.waitForLoadState('networkidle') : page.waitForNavigation({ waitUntil: 'networkidle0' }).catch((error) => {
+        console.log('PAGE ERROR:', error)
+      })
       await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Strategy 1: Try direct simple approach first (like your example)
@@ -889,4 +891,4 @@ class BrowserService {
 }
 
 // Export singleton instance
-export default new BrowserService() 
+export default new BrowserService()

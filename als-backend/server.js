@@ -18,7 +18,11 @@ import logRoutes from "./routes/logRoutes.js"
 dotenv.config()
 
 // Connect to MongoDB
-connectDB()
+connectDB().then(() => {
+  console.log('MongoDB Connected Successfully!')
+}).catch(err => {
+  console.error('MongoDB connection error:', err)
+})
 
 const app = express()
 const server = createServer(app)
@@ -198,6 +202,6 @@ process.on('SIGINT', async () => {
 
 const PORT = process.env.PORT || 5001
 
-server.listen(PORT, () => {
-  // Server started on port ${PORT}
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server started on port ${PORT}`)
 })
