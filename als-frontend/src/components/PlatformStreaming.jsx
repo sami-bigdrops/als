@@ -1,77 +1,104 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { io } from 'socket.io-client'
-import { SOCKET_URL, API_URL } from '../config/api'
+import socket from '../utils/socket'
+import { API_URL } from '../config/api'
 
 function PlatformStreaming({ platform, employee, onClose }) {
-  const [socket, setSocket] = useState(null)
+  const [isConnected, setIsConnected] = useState(false)
   const [screenshot, setScreenshot] = useState(null)
   const [loginStatus, setLoginStatus] = useState({ status: 'connecting', message: 'Connecting...' })
   const [isStreaming, setIsStreaming] = useState(false)
   const canvasRef = useRef(null)
   const lastInteractionRef = useRef(Date.now())
+  const connectionTimeoutRef = useRef(null)
 
   // Initialize socket connection
   useEffect(() => {
-    const newSocket = io(SOCKET_URL)
+    // Set up connection timeout
+    connectionTimeoutRef.current = setTimeout(() => {
+      if (!isConnected) {
+        setLoginStatus({ 
+          status: 'error', 
+          message: 'Connection timeout. Server may be busy. Please try again.' 
+        })
+      }
+    }, 30000) // 30 second timeout
 
-    newSocket.on('connect', () => {
+    // Connect socket
+    socket.connect()
+
+    socket.on('connect', () => {
+      console.log('Socket connected')
+      setIsConnected(true)
+      clearTimeout(connectionTimeoutRef.current)
       // Join room for this employee
-      newSocket.emit('join-employee-room', employee.id)
-      startPlatformStream(newSocket)
+      socket.emit('join-employee-room', employee.id)
+      startPlatformStream()
     })
 
-    newSocket.on('screenshot', (data) => {
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected')
+      setIsConnected(false)
+      setIsStreaming(false)
+    })
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error)
+      setLoginStatus({ 
+        status: 'error', 
+        message: 'Failed to connect to server. Please check your connection.' 
+      })
+    })
+
+    socket.on('screenshot', (data) => {
       setScreenshot(data.screenshot)
       if (!isStreaming) {
         setIsStreaming(true)
       }
     })
 
-    newSocket.on('login-status', (status) => {
+    socket.on('login-status', (status) => {
       setLoginStatus(status)
     })
 
-    newSocket.on('stream-started', () => {
+    socket.on('stream-started', () => {
       setLoginStatus({ status: 'started', message: 'Stream started successfully' })
     })
 
-    newSocket.on('stream-error', (error) => {
+    socket.on('stream-error', (error) => {
       setLoginStatus({ status: 'error', message: error.message })
     })
 
-    newSocket.on('stream-stopped', () => {
+    socket.on('stream-stopped', () => {
       setIsStreaming(false)
       setLoginStatus({ status: 'disconnected', message: 'Stream stopped' })
-      // Don't auto-close here since stopStream now handles it
     })
 
-    newSocket.on('page-error', () => {
+    socket.on('page-error', () => {
       // Page error occurred
     })
 
-    newSocket.on('page-dialog', () => {
+    socket.on('page-dialog', () => {
       // Page dialog detected
     })
 
-    newSocket.on('interaction-error', () => {
+    socket.on('interaction-error', () => {
       // Interaction error occurred
     })
 
-    setSocket(newSocket)
-
     return () => {
-      if (newSocket) {
+      clearTimeout(connectionTimeoutRef.current)
+      if (socket.connected) {
         // Stop any active stream before disconnecting
-        newSocket.emit('stop-platform-stream', { employeeId: employee.id })
+        socket.emit('stop-platform-stream', { employeeId: employee.id })
         // Give it a moment to send the stop signal
         setTimeout(() => {
-          newSocket.disconnect()
+          socket.disconnect()
         }, 100)
       }
     }
   }, [employee.id, platform.id])
 
-  const startPlatformStream = async (socketInstance) => {
+  const startPlatformStream = async () => {
     try {
       setLoginStatus({ status: 'initializing', message: 'Fetching platform credentials...' })
       
@@ -94,7 +121,7 @@ function PlatformStreaming({ platform, employee, onClose }) {
 
       setLoginStatus({ status: 'initializing', message: 'Initializing platform stream...' })
       
-      socketInstance.emit('start-platform-stream', {
+      socket.emit('start-platform-stream', {
         employeeId: employee.id,
         platformId: platform._id,
         employee: employee,
@@ -109,7 +136,7 @@ function PlatformStreaming({ platform, employee, onClose }) {
   }
 
   const stopStream = () => {
-    if (socket) {
+    if (socket.connected) {
       socket.emit('stop-platform-stream', { employeeId: employee.id })
     }
     
@@ -131,13 +158,13 @@ function PlatformStreaming({ platform, employee, onClose }) {
     }
     lastInteractionRef.current = now
 
-    if (socket && isStreaming) {
+    if (socket.connected && isStreaming) {
       socket.emit('user-interaction', {
         employeeId: employee.id,
         interaction
       })
     }
-  }, [socket, isStreaming, employee.id])
+  }, [isStreaming, employee.id])
 
   const handleCanvasClick = (event) => {
     const canvas = canvasRef.current

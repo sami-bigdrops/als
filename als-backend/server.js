@@ -48,6 +48,17 @@ const io = new Server(server, {
     origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"]
+  },
+  // Production performance optimizations
+  pingTimeout: 60000, // 60 seconds
+  pingInterval: 25000, // 25 seconds
+  transports: ['websocket', 'polling'],
+  allowEIO3: true, // Allow Engine.IO v3 clients
+  maxHttpBufferSize: 1e6, // 1MB buffer for screenshots
+  // Connection handling
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true,
   }
 })
 
